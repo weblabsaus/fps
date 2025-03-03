@@ -1,644 +1,223 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Urban Descent - FPS Prototype</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            overflow: hidden;
-            font-family: 'Arial', sans-serif;
-        }
-        
-        #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            background-color: #111;
-        }
-        
-        #game-scene {
-            width: 100%;
-            height: 100%;
-            perspective: 800px;
-        }
-        
-        .world {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            transform-style: preserve-3d;
-            transform: translateZ(0);
-        }
-        
-        .floor {
-            position: absolute;
-            width: 1000px;
-            height: 1000px;
-            background-image: url('/api/placeholder/1000/1000');
-            background-size: 100px 100px;
-            transform: rotateX(90deg) translateZ(-500px);
-            background-color: #333;
-            transform-origin: center;
-        }
-        
-        .ceiling {
-            position: absolute;
-            width: 1000px;
-            height: 1000px;
-            background-image: url('/api/placeholder/1000/1000');
-            background-size: 100px 100px;
-            transform: rotateX(90deg) translateZ(300px);
-            background-color: #222;
-        }
-        
-        .wall {
-            position: absolute;
-            width: 200px;
-            height: 300px;
-            background-color: #444;
-            background-image: url('/api/placeholder/400/300');
-            background-size: cover;
-        }
-        
-        .enemy {
-            position: absolute;
-            width: 50px;
-            height: 100px;
-            background-color: rgba(255, 0, 0, 0.7);
-            transform-style: preserve-3d;
-            transition: all 0.3s ease;
-        }
-        
-        .enemy.drone {
-            background-color: rgba(255, 0, 0, 0.7);
-            border: 2px solid #ff6600;
-        }
-        
-        .enemy.heavy {
-            background-color: rgba(128, 0, 0, 0.9);
-            border: 3px solid #990000;
-            width: 70px;
-            height: 120px;
-        }
-        
-        .enemy.tech {
-            background-color: rgba(255, 0, 255, 0.7);
-            border: 2px solid #cc00cc;
-        }
-        
-        .enemy.hunter {
-            background-color: rgba(0, 255, 0, 0.7);
-            border: 2px solid #00cc00;
-        }
-        
-        .weapon {
-            position: absolute;
-            bottom: 50px;
-            right: 50%;
-            transform: translateX(50%);
-            width: 200px;
-            height: 100px;
-            background-image: url('/api/placeholder/200/100');
-            background-size: cover;
-            z-index: 100;
-        }
-        
-        .hud {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 200;
-        }
-        
-        .crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-        }
-        
-        .crosshair::before, .crosshair::after {
-            content: '';
-            position: absolute;
-            background-color: rgba(255, 255, 255, 0.8);
-        }
-        
-        .crosshair::before {
-            top: 50%;
-            left: -5px;
-            right: -5px;
-            height: 2px;
-            transform: translateY(-50%);
-        }
-        
-        .crosshair::after {
-            left: 50%;
-            top: -5px;
-            bottom: -5px;
-            width: 2px;
-            transform: translateX(-50%);
-        }
-        
-        .health-bar {
-            position: absolute;
-            bottom: 30px;
-            left: 30px;
-            width: 200px;
-            height: 20px;
-            background-color: rgba(0, 0, 0, 0.5);
-            border: 2px solid #fff;
-        }
-        
-        .health-bar-fill {
-            height: 100%;
-            width: 100%;
-            background-color: #00cc00;
-        }
-        
-        .ammo-counter {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-        }
-        
-        .objective {
-            position: absolute;
-            top: 30px;
-            left: 30px;
-            color: white;
-            font-size: 18px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-            max-width: 300px;
-        }
-        
-        .mission-title {
-            position: absolute;
-            top: 80px;
-            width: 100%;
-            text-align: center;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-        }
-        
-        .infection-meter {
-            position: absolute;
-            top: 30px;
-            right: 30px;
-            width: 100px;
-            height: 20px;
-            background-color: rgba(0, 0, 0, 0.5);
-            border: 2px solid #fff;
-        }
-        
-        .infection-meter-fill {
-            height: 100%;
-            width: 60%;
-            background-color: #ff00ff;
-        }
-        
-        .damage-overlay {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 0, 0, 0);
-            pointer-events: none;
-            transition: background-color 0.3s ease;
-        }
-        
-        .damage-overlay.active {
-            background-color: rgba(255, 0, 0, 0.3);
-        }
-        
-        .menu {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 300;
-        }
-        
-        .menu.hidden {
-            display: none;
-        }
-        
-        .menu h1 {
-            color: white;
-            font-size: 48px;
-            margin-bottom: 40px;
-            text-shadow: 0 0 10px #00aaff;
-        }
-        
-        .menu-button {
-            background-color: #00aaff;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            margin: 10px;
-            font-size: 18px;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: all 0.2s ease;
-        }
-        
-        .menu-button:hover {
-            background-color: #0088cc;
-            transform: scale(1.05);
-        }
-        
-        .district-select {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            max-width: 800px;
-            margin-top: 20px;
-        }
-        
-        .district {
-            width: 150px;
-            height: 150px;
-            margin: 10px;
-            background-color: #333;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            cursor: pointer;
-            border: 2px solid #555;
-            transition: all 0.2s ease;
-        }
-        
-        .district:hover {
-            border-color: #00aaff;
-            transform: scale(1.05);
-        }
-        
-        .district.locked {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .district.completed {
-            border-color: #00cc00;
-        }
-        
-        .district.infected {
-            border-color: #ff00ff;
-        }
-        
-        .muzzle-flash {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background-color: rgba(255, 255, 0, 0.7);
-            border-radius: 50%;
-            filter: blur(5px);
-            opacity: 0;
-            transition: opacity 0.05s ease;
-        }
-        
-        .muzzle-flash.active {
-            opacity: 1;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>FPS Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    #blocker {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+    #instructions {
+      font-size: 36px;
+      color: #ffffff;
+      text-align: center;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="game-scene">
-            <div class="world">
-                <div class="floor"></div>
-                <div class="ceiling"></div>
-                <!-- Walls -->
-                <div class="wall" style="transform: translateZ(-500px) translateX(-100px)"></div>
-                <div class="wall" style="transform: translateZ(-500px) translateX(100px)"></div>
-                <div class="wall" style="transform: rotateY(90deg) translateZ(-500px) translateX(-100px)"></div>
-                <div class="wall" style="transform: rotateY(90deg) translateZ(-500px) translateX(100px)"></div>
-                <div class="wall" style="transform: translateZ(-700px) translateX(-100px)"></div>
-                <div class="wall" style="transform: translateZ(-700px) translateX(100px)"></div>
-                
-                <!-- Enemies -->
-                <div class="enemy drone" style="transform: translateZ(-400px) translateX(-150px)"></div>
-                <div class="enemy tech" style="transform: translateZ(-600px) translateX(70px)"></div>
-                <div class="enemy heavy" style="transform: translateZ(-800px) translateX(-50px)"></div>
-                <div class="enemy hunter" style="transform: translateZ(-350px) translateX(200px)"></div>
-            </div>
-            
-            <div class="weapon"></div>
-            
-            <div class="hud">
-                <div class="crosshair"></div>
-                <div class="health-bar">
-                    <div class="health-bar-fill"></div>
-                </div>
-                <div class="ammo-counter">30 / 120</div>
-                <div class="objective">Current Objective: Clear Downtown Core of infected drones</div>
-                <div class="mission-title">DOWNTOWN CORE - EXTRACTION MISSION</div>
-                <div class="infection-meter">
-                    <div class="infection-meter-fill"></div>
-                </div>
-                <div class="damage-overlay"></div>
-                <div class="muzzle-flash"></div>
-            </div>
-        </div>
-        
-        <div class="menu" id="main-menu">
-            <h1>URBAN DESCENT</h1>
-            <button class="menu-button" id="start-game">START MISSION</button>
-            <button class="menu-button" id="select-district">SELECT DISTRICT</button>
-            <button class="menu-button" id="loadout">CUSTOMIZE LOADOUT</button>
-            <button class="menu-button" id="options">OPTIONS</button>
-        </div>
-        
-        <div class="menu hidden" id="district-menu">
-            <h1>SELECT DISTRICT</h1>
-            <div class="district-select">
-                <div class="district completed">
-                    <div>DOWNTOWN CORE</div>
-                    <div>75% SECURED</div>
-                </div>
-                <div class="district infected">
-                    <div>CHINATOWN</div>
-                    <div>33% SECURED</div>
-                </div>
-                <div class="district">
-                    <div>INDUSTRIAL ZONE</div>
-                    <div>10% SECURED</div>
-                </div>
-                <div class="district locked">
-                    <div>SUBURBAN SPRAWL</div>
-                    <div>LOCKED</div>
-                </div>
-                <div class="district locked">
-                    <div>UNDERGROUND NETWORK</div>
-                    <div>LOCKED</div>
-                </div>
-            </div>
-            <button class="menu-button" id="back-button">BACK</button>
-        </div>
-    </div>
+  <div id="blocker">
+    <div id="instructions">Click to Play</div>
+  </div>
 
-    <script>
-        // Game variables
-        let playerX = 0;
-        let playerZ = 0;
-        let playerRotationX = 0;
-        let playerRotationY = 0;
-        let isMouseLocked = false;
-        let isGameStarted = false;
-        let health = 100;
-        let ammo = 30;
-        let totalAmmo = 120;
-        let enemies = document.querySelectorAll('.enemy');
-        let world = document.querySelector('.world');
-        
-        // DOM elements
-        const gameContainer = document.getElementById('game-container');
-        const mainMenu = document.getElementById('main-menu');
-        const districtMenu = document.getElementById('district-menu');
-        const startGameButton = document.getElementById('start-game');
-        const selectDistrictButton = document.getElementById('select-district');
-        const backButton = document.getElementById('back-button');
-        const healthBarFill = document.querySelector('.health-bar-fill');
-        const ammoCounter = document.querySelector('.ammo-counter');
-        const damageOverlay = document.querySelector('.damage-overlay');
-        const muzzleFlash = document.querySelector('.muzzle-flash');
-        
-        // Game initialization
-        function initGame() {
-            mainMenu.classList.add('hidden');
-            isGameStarted = true;
-            requestPointerLock();
-            setupEventListeners();
-            gameLoop();
+  <!-- Load Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Load PointerLockControls -->
+  <script src="https://threejs.org/examples/js/controls/PointerLockControls.js"></script>
+
+  <script>
+    let camera, scene, renderer, controls;
+    const objects = [];
+    let raycaster;
+
+    let moveForward = false;
+    let moveBackward = false;
+    let moveLeft = false;
+    let moveRight = false;
+    let canJump = false;
+
+    let prevTime = performance.now();
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+
+    init();
+    animate();
+
+    function init() {
+      // Setup camera and scene
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xcccccc);
+      scene.fog = new THREE.Fog(0xffffff, 0, 750);
+
+      // Add a light source
+      const light = new THREE.HemisphereLight(0xeeeeff, 0x777788, 0.75);
+      light.position.set(0.5, 1, 0.75);
+      scene.add(light);
+
+      // Setup PointerLockControls
+      controls = new THREE.PointerLockControls(camera, document.body);
+      scene.add(controls.getObject());
+
+      const blocker = document.getElementById('blocker');
+      const instructions = document.getElementById('instructions');
+
+      instructions.addEventListener('click', function () {
+        controls.lock();
+      }, false);
+
+      controls.addEventListener('lock', function () {
+        blocker.style.display = 'none';
+      });
+
+      controls.addEventListener('unlock', function () {
+        blocker.style.display = 'flex';
+      });
+
+      // Keyboard controls
+      const onKeyDown = function (event) {
+        switch (event.code) {
+          case 'ArrowUp':
+          case 'KeyW':
+            moveForward = true;
+            break;
+          case 'ArrowLeft':
+          case 'KeyA':
+            moveLeft = true;
+            break;
+          case 'ArrowDown':
+          case 'KeyS':
+            moveBackward = true;
+            break;
+          case 'ArrowRight':
+          case 'KeyD':
+            moveRight = true;
+            break;
+          case 'Space':
+            if (canJump === true) velocity.y += 350;
+            canJump = false;
+            break;
         }
-        
-        // Event listeners
-        function setupEventListeners() {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('click', handleClick);
-            document.addEventListener('keydown', handleKeyDown);
-            document.addEventListener('pointerlockchange', handlePointerLockChange);
+      };
+
+      const onKeyUp = function (event) {
+        switch (event.code) {
+          case 'ArrowUp':
+          case 'KeyW':
+            moveForward = false;
+            break;
+          case 'ArrowLeft':
+          case 'KeyA':
+            moveLeft = false;
+            break;
+          case 'ArrowDown':
+          case 'KeyS':
+            moveBackward = false;
+            break;
+          case 'ArrowRight':
+          case 'KeyD':
+            moveRight = false;
+            break;
         }
-        
-        // Pointer lock
-        function requestPointerLock() {
-            gameContainer.requestPointerLock = gameContainer.requestPointerLock || 
-                                              gameContainer.mozRequestPointerLock ||
-                                              gameContainer.webkitRequestPointerLock;
-            gameContainer.requestPointerLock();
-        }
-        
-        function handlePointerLockChange() {
-            isMouseLocked = document.pointerLockElement === gameContainer || 
-                           document.mozPointerLockElement === gameContainer || 
-                           document.webkitPointerLockElement === gameContainer;
-        }
-        
-        // Mouse movement
-        function handleMouseMove(e) {
-            if (!isMouseLocked || !isGameStarted) return;
-            
-            // Adjust sensitivity
-            const sensitivity = 0.2;
-            
-            // Update rotation based on mouse movement
-            playerRotationY += e.movementX * sensitivity;
-            playerRotationX -= e.movementY * sensitivity;
-            
-            // Limit vertical rotation
-            playerRotationX = Math.max(-60, Math.min(60, playerRotationX));
-            
-            updatePlayerView();
-        }
-        
-        // Keyboard input
-        function handleKeyDown(e) {
-            if (!isGameStarted) return;
-            
-            const moveSpeed = 10;
-            
-            switch(e.key) {
-                case 'w':
-                    playerZ -= moveSpeed * Math.cos(playerRotationY * Math.PI / 180);
-                    playerX += moveSpeed * Math.sin(playerRotationY * Math.PI / 180);
-                    break;
-                case 's':
-                    playerZ += moveSpeed * Math.cos(playerRotationY * Math.PI / 180);
-                    playerX -= moveSpeed * Math.sin(playerRotationY * Math.PI / 180);
-                    break;
-                case 'a':
-                    playerX -= moveSpeed * Math.cos(playerRotationY * Math.PI / 180);
-                    playerZ -= moveSpeed * Math.sin(playerRotationY * Math.PI / 180);
-                    break;
-                case 'd':
-                    playerX += moveSpeed * Math.cos(playerRotationY * Math.PI / 180);
-                    playerZ += moveSpeed * Math.sin(playerRotationY * Math.PI / 180);
-                    break;
-                case 'r':
-                    reload();
-                    break;
-                case 'Escape':
-                    exitGame();
-                    break;
-            }
-            
-            updatePlayerView();
-        }
-        
-        // Player view update
-        function updatePlayerView() {
-            world.style.transform = `translateZ(800px) rotateX(${playerRotationX}deg) rotateY(${playerRotationY}deg) translateX(${-playerX}px) translateZ(${-playerZ}px)`;
-        }
-        
-        // Shooting
-        function handleClick(e) {
-            if (!isGameStarted || ammo <= 0) return;
-            
-            shoot();
-            checkHit();
-        }
-        
-        function shoot() {
-            ammo--;
-            ammoCounter.textContent = `${ammo} / ${totalAmmo}`;
-            
-            // Muzzle flash
-            muzzleFlash.style.left = '50%';
-            muzzleFlash.style.bottom = '150px';
-            muzzleFlash.classList.add('active');
-            
-            setTimeout(() => {
-                muzzleFlash.classList.remove('active');
-            }, 50);
-            
-            // Play sound (would be implemented with audio API)
-        }
-        
-        function reload() {
-            if (totalAmmo <= 0) return;
-            
-            const reloadAmount = Math.min(30 - ammo, totalAmmo);
-            ammo += reloadAmount;
-            totalAmmo -= reloadAmount;
-            
-            ammoCounter.textContent = `${ammo} / ${totalAmmo}`;
-        }
-        
-        // Hit detection (simplified)
-        function checkHit() {
-            // In a real game, this would be raycasting
-            enemies.forEach(enemy => {
-                const rect = enemy.getBoundingClientRect();
-                const centerX = window.innerWidth / 2;
-                const centerY = window.innerHeight / 2;
-                
-                if (rect.left < centerX && centerX < rect.right && 
-                    rect.top < centerY && centerY < rect.bottom) {
-                    enemy.style.display = 'none'; // "kill" enemy
-                }
-            });
-        }
-        
-        // Take damage
-        function takeDamage(amount) {
-            health -= amount;
-            health = Math.max(0, health);
-            
-            healthBarFill.style.width = `${health}%`;
-            
-            // Show damage overlay
-            damageOverlay.classList.add('active');
-            setTimeout(() => {
-                damageOverlay.classList.remove('active');
-            }, 300);
-            
-            if (health <= 0) {
-                gameOver();
-            }
-        }
-        
-        // Game over
-        function gameOver() {
-            exitGame();
-            alert('Mission Failed!');
-        }
-        
-        // Exit game
-        function exitGame() {
-            isGameStarted = false;
-            mainMenu.classList.remove('hidden');
-            document.exitPointerLock = document.exitPointerLock || 
-                                      document.mozExitPointerLock ||
-                                      document.webkitExitPointerLock;
-            document.exitPointerLock();
-        }
-        
-        // Game loop
-        function gameLoop() {
-            if (!isGameStarted) return;
-            
-            // Enemy AI (simplified)
-            enemies.forEach(enemy => {
-                if (enemy.style.display === 'none') return;
-                
-                // Move enemies toward player
-                const enemyZ = parseFloat(enemy.style.transform.split('translateZ(')[1]);
-                const enemyX = parseFloat(enemy.style.transform.split('translateX(')[1]);
-                
-                if (Math.random() < 0.01) {
-                    takeDamage(5); // Random chance to damage player
-                }
-            });
-            
-            requestAnimationFrame(gameLoop);
-        }
-        
-        // Menu navigation
-        startGameButton.addEventListener('click', initGame);
-        
-        selectDistrictButton.addEventListener('click', () => {
-            mainMenu.classList.add('hidden');
-            districtMenu.classList.remove('hidden');
-        });
-        
-        backButton.addEventListener('click', () => {
-            districtMenu.classList.add('hidden');
-            mainMenu.classList.remove('hidden');
-        });
-        
-        // District selection
-        document.querySelectorAll('.district:not(.locked)').forEach(district => {
-            district.addEventListener('click', () => {
-                districtMenu.classList.add('hidden');
-                initGame();
-            });
-        });
-    </script>
+      };
+
+      document.addEventListener('keydown', onKeyDown, false);
+      document.addEventListener('keyup', onKeyUp, false);
+
+      // Floor
+      const floorGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
+      floorGeometry.rotateX(-Math.PI / 2);
+      const floorMaterial = new THREE.MeshBasicMaterial({ color: 0x007700, wireframe: true });
+      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+      scene.add(floor);
+
+      // Add random boxes as obstacles
+      const boxGeometry = new THREE.BoxGeometry(20, 20, 20);
+      const boxMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+      for (let i = 0; i < 50; i++) {
+        const box = new THREE.Mesh(boxGeometry, boxMaterial);
+        box.position.x = Math.floor(Math.random() * 20 - 10) * 20;
+        box.position.y = 10;
+        box.position.z = Math.floor(Math.random() * 20 - 10) * 20;
+        scene.add(box);
+        objects.push(box);
+      }
+
+      // Renderer setup
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      window.addEventListener('resize', onWindowResize, false);
+
+      // Raycaster for ground collision detection
+      raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 10);
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const time = performance.now();
+      const delta = (time - prevTime) / 1000;
+
+      // Apply damping to the velocity
+      velocity.x -= velocity.x * 10.0 * delta;
+      velocity.z -= velocity.z * 10.0 * delta;
+      velocity.y -= 9.8 * 100.0 * delta; // gravity
+
+      direction.z = Number(moveForward) - Number(moveBackward);
+      direction.x = Number(moveRight) - Number(moveLeft);
+      direction.normalize();
+
+      if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
+      if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
+
+      // Check if the player is on the ground
+      const controlObject = controls.getObject();
+      raycaster.ray.origin.copy(controlObject.position);
+      raycaster.ray.origin.y -= 10;
+      const intersections = raycaster.intersectObjects([/* you can add ground objects here if needed */], true);
+      const onObject = intersections.length > 0;
+
+      if (onObject) {
+        velocity.y = Math.max(0, velocity.y);
+        canJump = true;
+      }
+
+      controlObject.position.x += velocity.x * delta;
+      controlObject.position.y += velocity.y * delta;
+      controlObject.position.z += velocity.z * delta;
+
+      // Prevent falling through the floor
+      if (controlObject.position.y < 10) {
+        velocity.y = 0;
+        controlObject.position.y = 10;
+        canJump = true;
+      }
+
+      prevTime = time;
+      renderer.render(scene, camera);
+    }
+  </script>
 </body>
 </html>
